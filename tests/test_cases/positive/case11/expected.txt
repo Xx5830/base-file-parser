@@ -3,8 +3,7 @@ This is the 1st test.
 It is pretty complex.
 Adding _ has never been so useful before
 
-I do can write single braces like {this}. But if I wanna write double, I can use smth like
-{{ and }}; Why not.
+I do can write single braces like {this}. But if I wanna write double, I'll be just sad with no double braces.
 
 Remember, that keys are sensitive_to_case, so Andrew and Vladimir are different keys.
 
