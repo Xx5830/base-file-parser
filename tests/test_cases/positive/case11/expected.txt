@@ -8,7 +8,7 @@ I do can write single braces like {this}. But if I wanna write double, I'll be j
 Remember, that keys are sensitive_to_case, so Andrew and Vladimir are different keys.
 
 I can also use templates in the way like this 
-and there should not be any whitespaces or line breaks excluding that one after }}. 
+and there should not be any whitespaces or line breaks excluding that one after double_braces_right. 
 Oh, let's repeat whitespaces but whithout whitespaces.
 
 
