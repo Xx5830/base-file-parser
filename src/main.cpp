@@ -1,115 +1,110 @@
 #include <cstdint>
 #include <iostream>
 
-namespace contain {
-template <typename T>
-class Collection;
+class ArrayChar {
+  const char* kStr;
+  size_t sizeStr;
 
-template <typename T>
-class Iterator {
  public:
-  virtual bool HasNext() = 0;
-  virtual void Next() = 0;
-  virtual const T* Get() = 0;
-};
+  ArrayChar(const char* str) {
+    sizeStr = GetLength(str);
+    kStr = Copy(kStr);
+  }
+  ~ArrayChar(){
+    delete[] kStr;
+  }
 
-// Collection interface for iterable
-template <typename T>
-class Collection {
- public:
-  virtual const T* Get(uint32_t index) = 0;
-  virtual void Set(uint32_t index, const T& value) = 0;
-  virtual Iterator<T>* GetIterator() = 0;
-  virtual uint32_t Length() = 0;
-};
+  size_t GetLength() const { return sizeStr; }
 
-// Dynamic list with fix length
-template <typename T>
-class ArrayList : public Collection<T> {
- private:
-  T* arr;
-  uint32_t size;
+  char GetValue(uint32_t index) const { return kStr[index]; }
 
-  template <typename U>
-  class MyIterator : public Iterator<U> {
-   private:
-    const ArrayList<T>* kArrayList;
-    uint32_t index;
+  ArrayChar* Copy() const {
+    size_t sizeStr = GetLength();
 
-   public:
-    MyIterator(const ArrayList<T>*& kArrayList) {
-      this->kArrayList = &kArrayList;
+    char* newStr = new char[sizeStr];
+    for (int i = 0; i < sizeStr; i++) {
+      newStr[i] = GetValue(i);
     }
 
-    bool HasNext() { return index + 1 < kArrayList->Length(); }
-    void Next() { ++index; }
-    const T* Get() { return kArrayList->Get(index); }
-    ~MyIterator() { delete index; }
+    return new ArrayChar(newStr);
+  }
+
+  static size_t GetLength(const char* kStr) {
+    size_t sizeStr = 0;
+    while (kStr != '\0') {
+      ++sizeStr;
+    }
+
+    return sizeStr;
+  }
+
+  static char* Copy(const char* str) {
+    size_t sizeStr = GetLength(str);
+
+    char* newStr = new char[sizeStr];
+    for (int i = 0; i < sizeStr; i++) {
+      newStr[i] = str[i];
+    }
+
+    return newStr;
+  }
+};
+
+class Trie {
+  struct Node {
+    ArrayChar* key;
+    Node* next;
   };
+  Node* kHead;
+  size_t kSizeNext = 36;
 
- public:
-  ArrayList(uint32_t _size) {
-    size = _size;
+  public:
+  Trie() { kHead = new Node(); }
 
-    arr = new T[Length()];
+  uint32_t CharToIndex(char cv) const {
+    if (cv >= 'a' && cv <= 'z') {
+        return cv - 'a';
+    }
+    else if (cv >= '0' && cv <= '9'){
+      return 26 + (cv - '0');
+    }
+    else{
+      return 36;
+    }
   }
-  ~ArrayList() { delete[] arr; }
 
-  const T* Get(uint32_t index) {
-    if (index >= Length()) {
-      // need return error and log info
+  Node *GetNode(const ArrayChar *kStr){
+    Node* myNode = kHead;
+    size_t sizeStr = kStr->GetLength();
+
+    for (int i = 0; i < sizeStr; i++){
+      char currentValue = kStr->GetValue(i);
+
+      if (!myNode->next) {
+        myNode->next = new Node[kSizeNext];
+      }
+
+      myNode = &myNode->next[currentValue];
     }
 
-    return &arr[index];
+    return myNode;
   }
 
-  void Set(uint32_t index, const T& value) {
-    if (index >= Length()) {
-      // need return error and log info
+  void add(const ArrayChar *kStr, const ArrayChar *kKey) {
+    Node *myNode = GetNode(kStr);
+
+    if (myNode->key != nullptr) {
+      delete myNode->key;
     }
 
-    arr[index] = value;
+    myNode->key = kKey->Copy();
   }
 
-  Iterator<T>* GetIterator() { return new MyIterator<T>(this); }
+  ArrayChar* get(const ArrayChar *kStr) const {
+     Node *myNode = GetNode(kStr);
 
-  uint32_t Length() { return size; }
+     return myNode->key->Copy();
+  }
 };
 
-/* template <typename T>
-class List : public Collection<T> {
- private:
-  T* arr;
-  uint32_t capacity;
-  const uint32_t kCapacityMultiplier = 2;
-
- public:
-  List(uint32_t _size, T element = T()) : Collection<T>(_size) {
-    capacity = this->size * kCapacityMultiplier;
-    arr = new T[capacity];
-
-    for (size_t i = 0; i < capacity; i++) {
-      arr[i] = element;
-    }
-  }
-
-  T get(uint32_t index) {
-    return arr[index];
-  }
-
-  template <typename T>
-  class Vector : public : List{
-
-  };
-}; */
-
-};  // namespace contain
-
-int main(int, char**) {
-  contain::ArrayList<int> mas(5);
-
-  for (int i = 0; i < 5; i++) {
-    mas.Set(i, i + 1);
-    std::cout << (*mas.Get(i)) << "\n";
-  }
-}
+int main(int, char**) {}
