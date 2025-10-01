@@ -149,7 +149,7 @@ class Trie {
         // Не знаю как в компазиции сказать классу, что он всегда может видеть
         // поля класса в котором он находиться, думаю так сделать нельзя, а
         // значит kSizeNext не переиспользуеться
-        for (uint32_t index = 0; index < 36; index++) {
+        for (uint32_t index = 0; index < 63; index++) {
           if (next[index]) {
             delete next[index];
           }
@@ -159,7 +159,7 @@ class Trie {
     }
   };
   Node* head;
-  const size_t kSizeNext = 36;
+  const size_t kSizeNext = 63;
 
  public:
   Trie() { head = new Node(); }
@@ -167,10 +167,12 @@ class Trie {
   uint32_t SymbolToIndex(char symbol) const {
     if (symbol >= 'a' && symbol <= 'z') {
       return symbol - 'a';
+    } else if (symbol >= 'A' && symbol <= 'Z') {
+      return 26 + (symbol - 'A');
     } else if (symbol >= '0' && symbol <= '9') {
-      return 26 + (symbol - '0');
+      return 52 + (symbol - '0');
     } else {
-      return 36;
+      return 62;
     }
   }
 
@@ -317,8 +319,7 @@ struct Parser {
            line_trim->GetValue(1) == '/')) {
         delete line_trim;
         continue;
-      }
-      else if (line_trim->GetLength() == 0){
+      } else if (line_trim->GetLength() == 0) {
         delete line_trim;
         continue;
       } else if (line_trim->GetLength() < 3) {
@@ -349,15 +350,16 @@ struct Parser {
         key.SetValue(index_value, line_trim->GetValue(index_value));
       }
       for (uint32_t index_line_trim = index_sign_equal + 1, index_value = 0;
-           index_line_trim < line_trim->GetLength(); index_line_trim++, index_value++) {
+           index_line_trim < line_trim->GetLength();
+           index_line_trim++, index_value++) {
         value.SetValue(index_value, line_trim->GetValue(index_line_trim));
       }
 
       ArrayChar key_trim = key.Trim();
       ArrayChar value_trim = value.Trim();
 
-      //std::cout << "key: " << key_trim.ToChar() << std::endl;
-      //std::cout << "value: " << value_trim.ToChar() << std::endl;
+      // std::cout << "key: " << key_trim.ToChar() << std::endl;
+      // std::cout << "value: " << value_trim.ToChar() << std::endl;
       set_keys->Add(&key_trim, &value_trim);
 
       delete line_trim;
@@ -409,7 +411,8 @@ struct Parser {
           key.SetValue(index_value, line_trim->GetValue(index_value));
         }
         for (uint32_t index_line_trim = index_sign_equal + 1, index_value = 0;
-             index_line_trim < line_trim->GetLength(); index_line_trim++, index_value++) {
+             index_line_trim < line_trim->GetLength();
+             index_line_trim++, index_value++) {
           value.SetValue(index_value, line_trim->GetValue(index_line_trim));
         }
 
@@ -451,7 +454,8 @@ struct Parser {
         if (mystate == State::key) {
           if ((symbol >= 'a' && symbol <= 'z') ||
               (symbol >= 'A' && symbol <= 'Z') ||
-              (symbol >= '0' && symbol <= '9') || symbol == ' ' || symbol == '_') {
+              (symbol >= '0' && symbol <= '9') || symbol == ' ' ||
+              symbol == '_') {
             buff_for_key->SetValue(current_size_buff, symbol);
             buff_for_key->SetValue(++current_size_buff, '\0');
             return true;
@@ -608,7 +612,7 @@ int main(int argc, char* argv[]) {
 
   file_template->close();
   file_data->close();
-  if (file_output){
+  if (file_output) {
     file_output->close();
   }
 }
