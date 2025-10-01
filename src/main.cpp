@@ -255,7 +255,7 @@ struct Parser {
     return result_key;
   }
 
-  static std::pair<bool, char*> CorrectlyParamKeys(
+  static std::pair<bool, const char*> CorrectlyParamKeys(
       const ArrayChar* kPathTemplate, const ArrayChar* kPathData,
       const ArrayChar* kPathOutput) {
     if (!kPathTemplate || !kPathData) {
@@ -279,7 +279,7 @@ struct Parser {
     return {true, nullptr};
   }
 
-  static std::pair<bool, char*> CorrectlyFiles(
+  static std::pair<bool, const char*> CorrectlyFiles(
       const std::ifstream* kFileTemplate, const std::ifstream* kFileData,
       const std::ofstream* kFileOutPut) {
     if (!kFileTemplate->is_open()) {
@@ -301,11 +301,11 @@ struct Parser {
     size_t kSizeBuff = 1024;
     char buff[kSizeBuff];
     ArrayChar line(kSizeBuff);
+    for (uint32_t index = 0; index < line.GetLength(); index++) {
+      line.SetValue(index, ' ');
+    }
 
     while (file->getline(buff, kSizeBuff)) {
-      for (uint32_t index = 0; index < line.GetLength(); index++) {
-        line.SetValue(index, ' ');
-      }
       for (uint32_t index = 0; index < kSizeBuff && buff[index] != '\0';
            index++) {
         line.SetValue(index, buff[index]);
@@ -317,9 +317,17 @@ struct Parser {
           (line_trim->GetLength() > 1 &&
            line_trim->GetValue(0) == line_trim->GetValue(1) &&
            line_trim->GetValue(1) == '/')) {
+        for (uint32_t index = 0; index < kSizeBuff && buff[index] != '\0';
+             index++) {
+          line.SetValue(index, ' ');
+        }
         delete line_trim;
         continue;
       } else if (line_trim->GetLength() == 0) {
+        for (uint32_t index = 0; index < kSizeBuff && buff[index] != '\0';
+             index++) {
+          line.SetValue(index, ' ');
+        }
         delete line_trim;
         continue;
       } else if (line_trim->GetLength() < 3) {
@@ -362,6 +370,10 @@ struct Parser {
       // std::cout << "value: " << value_trim.ToChar() << std::endl;
       set_keys->Add(&key_trim, &value_trim);
 
+      for (uint32_t index = 0; index < kSizeBuff && buff[index] != '\0';
+           index++) {
+        line.SetValue(index, ' ');
+      }
       delete line_trim;
     }
 
@@ -571,7 +583,7 @@ int main(int argc, char* argv[]) {
       Parser::GetCompileKey(argument_arr_size, argument_arr_str,
                             kCompilePattern[4], kCompilePattern[5]);
 
-  std::pair<bool, char*> correctly_path =
+  std::pair<bool, const char*> correctly_path =
       Parser::CorrectlyParamKeys(path_template, path_data, path_output);
   if (!correctly_path.first) {
     std::cerr << "Parsing error: " << correctly_path.second << std::endl;
@@ -584,7 +596,7 @@ int main(int argc, char* argv[]) {
     file_output = new std::ofstream(path_output->ToChar());
   }
 
-  std::pair<bool, char*> correctly_file =
+  std::pair<bool, const char*> correctly_file =
       Parser::CorrectlyFiles(file_template, file_data, file_output);
   if (!correctly_file.first) {
     std::cerr << "Open file error: " << correctly_file.second << std::endl;
