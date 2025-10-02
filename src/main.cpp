@@ -27,7 +27,8 @@ class ArrayChar {
   }
   ArrayChar(size_t size) {
     size_str = size;
-    str = new char[size];
+    str = new char[size + 1];
+    str[size] = '\0';
   }
   ~ArrayChar() { delete[] str; }
 
@@ -88,7 +89,7 @@ class ArrayChar {
 
   ArrayChar* Trim() {
     int32_t left = 0;
-    while (left < this->GetLength() && GetValue(left) == ' ') {
+    while (left < (int32_t)this->GetLength() && GetValue(left) == ' ') {
       ++left;
     }
 
@@ -103,7 +104,7 @@ class ArrayChar {
 
     ArrayChar* trim_str = new ArrayChar(right - left + 1);
 
-    for (uint32_t index_str = left, index_trim_str = 0; index_str <= right;
+    for (uint32_t index_str = left, index_trim_str = 0; (int32_t)index_str <= right;
          index_str++, index_trim_str++) {
       trim_str->SetValue(index_trim_str, this->GetValue(index_str));
     }
@@ -123,7 +124,8 @@ class ArrayChar {
   static char* Copy(const char* str) {
     size_t size_str = GetLength(str);
 
-    char* new_str = new char[size_str];
+    char* new_str = new char[size_str + 1];
+    new_str[size_str] = '\0';
     for (uint32_t index_str = 0; index_str < size_str; index_str++) {
       new_str[index_str] = str[index_str];
     }
@@ -132,89 +134,78 @@ class ArrayChar {
   }
 };
 
-class Trie {
-  struct Node {
+class ListMap {
+  struct Node{
     ArrayChar* key;
-    Node** next;
+    ArrayChar* value;
+    Node* next;
+    Node* prev;
 
-    Node() {
-      key = nullptr;
+    Node(const ArrayChar* kKey, const ArrayChar* kValue){
+      key = kKey->Copy();
+      value = kValue->Copy();
       next = nullptr;
+      prev = nullptr;
     }
-    ~Node() {
-      if (key) {
-        delete key;
+    ~Node(){
+      delete key;
+      delete value;
+      if (next){
+        delete next;
       }
-      if (next) {
-        // Не знаю как в компазиции сказать классу, что он всегда может видеть
-        // поля класса в котором он находиться, думаю так сделать нельзя, а
-        // значит kSizeNext не переиспользуеться
-        for (uint32_t index = 0; index < 63; index++) {
-          if (next[index]) {
-            delete next[index];
-          }
-        }
-        delete[] next;
-      }
+      delete prev;
     }
   };
+
   Node* head;
-  const size_t kSizeNext = 63;
+  Node* tail;
 
- public:
-  Trie() { head = new Node(); }
-
-  uint32_t SymbolToIndex(char symbol) const {
-    if (symbol >= 'a' && symbol <= 'z') {
-      return symbol - 'a';
-    } else if (symbol >= 'A' && symbol <= 'Z') {
-      return 26 + (symbol - 'A');
-    } else if (symbol >= '0' && symbol <= '9') {
-      return 52 + (symbol - '0');
-    } else {
-      return 62;
-    }
-  }
-
-  Node* GetNode(const ArrayChar* kStr) {
-    Node* my_node = head;
-    size_t size_str = kStr->GetLength();
-
-    for (int i = 0; i < size_str; i++) {
-      char current_symbol = kStr->GetValue(i);
-      uint32_t current_symbol_index = SymbolToIndex(current_symbol);
-
-      if (!my_node->next) {
-        my_node->next = new Node*[kSizeNext];
+  Node* GetNode(const ArrayChar* kKey){
+    Node* current_node = head;
+    while(current_node->next != nullptr){
+      current_node = current_node->next;
+      if (kKey->equal(current_node->key)){
+        return current_node;
       }
-      if (!my_node->next[current_symbol_index]) {
-        my_node->next[current_symbol_index] = new Node();
-      }
-
-      my_node = my_node->next[current_symbol_index];
     }
 
-    return my_node;
+    return nullptr;
+  }
+  public:
+
+  ListMap(){
+    ArrayChar *current_key = new  ArrayChar("#$#");
+    ArrayChar *current_value = new ArrayChar("");
+    head = new Node(current_key, current_value);
+    tail = head;
+    tail->prev = tail;
+
+    delete current_key;
+    delete current_value;
   }
 
-  void Add(const ArrayChar* kStr, const ArrayChar* kKey) {
-    Node* my_node = GetNode(kStr);
+  void Add(const ArrayChar* kKey, const ArrayChar* kValue) {
+    Node* current_node = GetNode(kKey);
 
-    if (my_node->key != nullptr) {
-      delete my_node->key;
+    if (current_node != nullptr){
+      delete current_node->value;
+      current_node->value = kValue->Copy();
+    } else{
+      Node *new_node = new Node(kKey, kValue);
+      new_node->prev = tail;
+      tail->next = new_node;
+      tail = new_node;
     }
-
-    my_node->key = kKey->Copy();
   }
 
-  ArrayChar* Get(const ArrayChar* kStr) {
-    Node* my_node = GetNode(kStr);
-
-    if (my_node->key == nullptr) {
+  ArrayChar* Get(const ArrayChar* kKey){
+    Node* current_node = GetNode(kKey);
+    if (current_node != nullptr) {
+      return current_node->value->Copy();
+    }
+    else{
       return nullptr;
     }
-
-    return my_node->key->Copy();
   }
 };
 
@@ -297,7 +288,7 @@ struct Parser {
     return {true, nullptr};
   }
 
-  static void CollectKeyFromFile(std::ifstream* file, Trie* set_keys) {
+  static void CollectKeyFromFile(std::ifstream* file, ListMap* set_keys) {
     size_t kSizeBuff = 1024;
     char buff[kSizeBuff];
     ArrayChar line(kSizeBuff);
@@ -437,9 +428,9 @@ struct Parser {
 
   static void ReadAndReplaceKeysAndOutputFile(std::ifstream* file_template,
                                               std::ofstream* file_output,
-                                              Trie* set_keys) {
+                                              ListMap* set_keys) {
     struct ReadMachin {
-      Trie* set_keys;
+      ListMap* set_keys;
       ArrayChar* buff_for_key;
       enum class State { text, startkey, key, finishkey };
       State mystate;
@@ -450,7 +441,7 @@ struct Parser {
       std::ofstream* file_output;
 
       ReadMachin(char start_separator_symbol, char finish_separator_symbol,
-                 size_t size_buff, Trie* set_keys, std::ofstream* file_output) {
+                 size_t size_buff, ListMap* set_keys, std::ofstream* file_output) {
         this->size_buff = size_buff;
         buff_for_key = new ArrayChar(this->size_buff);
         mystate = State::text;
@@ -603,7 +594,7 @@ int main(int argc, char* argv[]) {
     return 3;
   }
 
-  Trie* set_keys = new Trie();
+  ListMap* set_keys = new ListMap();
 
   Parser::CollectKeyFromFile(file_data, set_keys);
   Parser::ReadAndReplaceKeysAndOutputFile(file_template, file_output, set_keys);
