@@ -518,7 +518,7 @@ int main(int argc, char* argv[]) {
       Parser::GetCompileKey(argument_arr_size, argument_arr_str,
                             compile_pattern[4], compile_pattern[5]);
 
-  auto FreeAll = [&]() {
+  auto free_all = [&]() {
     for (uint32_t index = 0; index < 6; index++) {
       delete compile_pattern[index];
     }
@@ -531,15 +531,9 @@ int main(int argc, char* argv[]) {
     }
     delete[] argument_arr_str;
 
-    if (path_template) {
-      delete path_template;
-    }
-    if (path_data) {
-      delete path_data;
-    }
-    if (path_output) {
-      delete path_output;
-    }
+    delete path_template;
+    delete path_data;
+    delete path_output;
 
     if (file_template && file_template->is_open()) {
       file_template->close();
@@ -551,22 +545,16 @@ int main(int argc, char* argv[]) {
       file_output->close();
     }
 
-    if (file_template) {
-      delete file_template;
-    }
-    if (file_data) {
-      delete file_data;
-    }
-    if (file_output) {
-      delete file_output;
-    }
+    delete file_template;
+    delete file_data;
+    delete file_output;
   };
 
   std::pair<bool, const char*> correctly_path =
       Parser::CorrectlyParamKeys(path_template, path_data, path_output);
   if (!correctly_path.first) {
     std::cerr << "Parsing error: " << correctly_path.second << std::endl;
-    FreeAll();
+    free_all();
     return 2;
   }
 
@@ -589,7 +577,7 @@ int main(int argc, char* argv[]) {
       Parser::CorrectlyFiles(file_template, file_data, file_output);
   if (!correctly_file.first) {
     std::cerr << "Open file error: " << correctly_file.second << std::endl;
-    FreeAll();
+    free_all();
     return 3;
   }
 
@@ -599,7 +587,7 @@ int main(int argc, char* argv[]) {
       Parser::CollectKeyFromFile(file_data, set_keys);
   if (!result_collect_key.first) {
     std::cerr << result_collect_key.second << std::endl;
-    FreeAll();
+    free_all();
     delete set_keys;
     return 5;
   }
@@ -608,11 +596,11 @@ int main(int argc, char* argv[]) {
                                               set_keys);
   if (!result_read_replace_output.first) {
     std::cerr << result_read_replace_output.second << std::endl;
-    FreeAll();
+    free_all();
     delete set_keys;
     return 4;
   }
 
-  FreeAll();
+  free_all();
   delete set_keys;
 }
