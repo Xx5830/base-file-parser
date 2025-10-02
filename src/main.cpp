@@ -11,32 +11,32 @@ void PrintChar(char symbol, std::ofstream* kFileOut) {
 };
 
 class ArrayChar {
-  char* str;
-  size_t size_str;
+  char* str_;
+  size_t size_str_;
 
  public:
   ArrayChar(const char* str) {
-    size_str = GetLength(str);
-    this->str = ArrayChar::Copy(str);
+    size_str_ = GetLength(str);
+    this->str_ = ArrayChar::Copy(str);
   }
   ArrayChar(const ArrayChar* str) {
-    size_str = str->GetLength();
+    size_str_ = str->GetLength();
     ArrayChar* current = str->Copy();
-    this->str = current->ToChar();
+    this->str_ = current->ToChar();
     delete current;
   }
   ArrayChar(size_t size) {
-    size_str = size;
-    str = new char[size + 1];
-    str[size] = '\0';
+    size_str_ = size;
+    str_ = new char[size + 1];
+    str_[size] = '\0';
   }
-  ~ArrayChar() { delete[] str; }
+  ~ArrayChar() { delete[] str_; }
 
-  size_t GetLength() const { return size_str; }
+  size_t GetLength() const { return size_str_; }
 
-  char GetValue(uint32_t index) const { return str[index]; }
+  char GetValue(uint32_t index) const { return str_[index]; }
 
-  void SetValue(uint32_t index, char value) { str[index] = value; }
+  void SetValue(uint32_t index, char value) { str_[index] = value; }
 
   ArrayChar* Copy() const {
     size_t size_str = GetLength();
@@ -49,13 +49,13 @@ class ArrayChar {
     return new_str;
   }
 
-  bool equal(const ArrayChar* another) const {
+  bool Equal(const ArrayChar* another) const {
     if (this->GetLength() != another->GetLength()) return false;
 
-    return another->hasPrefix(this) && this->hasPrefix(another);
+    return another->HasPrefix(this) && this->HasPrefix(another);
   }
 
-  bool hasPrefix(const ArrayChar* prefix) const {
+  bool HasPrefix(const ArrayChar* prefix) const {
     if (this->GetLength() < prefix->GetLength()) {
       return false;
     }
@@ -70,22 +70,7 @@ class ArrayChar {
     return true;
   }
 
-  char* ToChar() const { return ArrayChar::Copy(str); }
-
-  /* std::pair<size_t, ArrayChar**> Parse(char separator) const {
-    uint32_t count_arr = 1;
-    for (uint32_t index_str = 0; index_str < GetLength(); index_str++){
-      if (GetValue(index_str) == separator){
-        ++count_arr;
-      }
-    }
-
-    ArrayChar** arrays_result = new ArrayChar*[count_arr];
-    char* str_current =  ;
-    for (uint32_t index_str = 0; index_str < GetLength(); index_str++){
-
-    }
-  } */
+  char* ToChar() const { return ArrayChar::Copy(str_); }
 
   ArrayChar* Trim() {
     int32_t left = 0;
@@ -148,23 +133,19 @@ class ListMap {
       prev = nullptr;
     }
     ~Node() {
-      if (key) {
-        delete key;
-      }
-      if (value) {
-        delete value;
-      }
+      delete key;
+      delete value;
     }
   };
 
-  Node* head;
-  Node* tail;
+  Node* head_;
+  Node* tail_;
 
   Node* GetNode(const ArrayChar* kKey) {
-    Node* current_node = head;
+    Node* current_node = head_;
     while (current_node->next != nullptr) {
       current_node = current_node->next;
-      if (kKey->equal(current_node->key)) {
+      if (kKey->Equal(current_node->key)) {
         return current_node;
       }
     }
@@ -176,15 +157,15 @@ class ListMap {
   ListMap() {
     ArrayChar* current_key = new ArrayChar("#$#");
     ArrayChar* current_value = new ArrayChar("");
-    head = new Node(current_key, current_value);
-    tail = head;
-    tail->prev = tail;
+    head_ = new Node(current_key, current_value);
+    tail_ = head_;
+    tail_->prev = tail_;
 
     delete current_key;
     delete current_value;
   }
   ~ListMap() {
-    Node* current_node = head;
+    Node* current_node = head_;
     while (current_node->next != nullptr) {
       Node* next_node = current_node->next;
       delete current_node;
@@ -201,9 +182,9 @@ class ListMap {
       current_node->value = kValue->Copy();
     } else {
       Node* new_node = new Node(kKey, kValue);
-      new_node->prev = tail;
-      tail->next = new_node;
-      tail = new_node;
+      new_node->prev = tail_;
+      tail_->next = new_node;
+      tail_ = new_node;
     }
   }
 
@@ -226,15 +207,15 @@ struct Parser {
 
     for (uint32_t index_argument = 0; index_argument < count_arguments;
          index_argument++) {
-      const ArrayChar* kCurrentStr = arguments_arr[index_argument];
+      ArrayChar* current_str = arguments_arr[index_argument];
 
-      if (kCurrentStr->equal(kShortPattern)) {
+      if (current_str->Equal(kShortPattern)) {
         if (index_argument + 1 != count_arguments) {
           result_key = arguments_arr[index_argument + 1]->Copy();
         }
         break;
-      } else if (kCurrentStr->hasPrefix(kLongPattern)) {
-        if (!arguments_arr[index_argument]->equal(kLongPattern)) {
+      } else if (current_str->HasPrefix(kLongPattern)) {
+        if (!arguments_arr[index_argument]->Equal(kLongPattern)) {
           size_t size_key = arguments_arr[index_argument]->GetLength() -
                             kLongPattern->GetLength();
           result_key = new ArrayChar(size_key);
@@ -298,7 +279,7 @@ struct Parser {
 
   static std::pair<bool, const char*> CollectKeyFromFile(std::ifstream* file,
                                                          ListMap* set_keys) {
-    size_t kSizeBuff = 1024;
+    const size_t kSizeBuff = 1024;
     char buff[kSizeBuff];
     ArrayChar line(kSizeBuff);
     for (uint32_t index = 0; index < line.GetLength(); index++) {
@@ -476,7 +457,7 @@ struct Parser {
       }
     };
 
-    size_t kSizeBuff = 1024;
+    const size_t kSizeBuff = 1024;
     char buff[kSizeBuff];
     ReadMachin machine('{', '}', kSizeBuff, set_keys, file_output);
 
