@@ -104,8 +104,8 @@ class ArrayChar {
 
     ArrayChar* trim_str = new ArrayChar(right - left + 1);
 
-    for (uint32_t index_str = left, index_trim_str = 0; (int32_t)index_str <= right;
-         index_str++, index_trim_str++) {
+    for (uint32_t index_str = left, index_trim_str = 0;
+         (int32_t)index_str <= right; index_str++, index_trim_str++) {
       trim_str->SetValue(index_trim_str, this->GetValue(index_str));
     }
 
@@ -135,47 +135,47 @@ class ArrayChar {
 };
 
 class ListMap {
-  struct Node{
+  struct Node {
     ArrayChar* key;
     ArrayChar* value;
     Node* next;
     Node* prev;
 
-    Node(const ArrayChar* kKey, const ArrayChar* kValue){
+    Node(const ArrayChar* kKey, const ArrayChar* kValue) {
       key = kKey->Copy();
       value = kValue->Copy();
       next = nullptr;
       prev = nullptr;
     }
-    ~Node(){
-      delete key;
-      delete value;
-      if (next){
-        delete next;
+    ~Node() {
+      if (key) {
+        delete key;
       }
-      delete prev;
+      if (value) {
+        delete value;
+      }
     }
   };
 
   Node* head;
   Node* tail;
 
-  Node* GetNode(const ArrayChar* kKey){
+  Node* GetNode(const ArrayChar* kKey) {
     Node* current_node = head;
-    while(current_node->next != nullptr){
+    while (current_node->next != nullptr) {
       current_node = current_node->next;
-      if (kKey->equal(current_node->key)){
+      if (kKey->equal(current_node->key)) {
         return current_node;
       }
     }
 
     return nullptr;
   }
-  public:
 
-  ListMap(){
-    ArrayChar *current_key = new  ArrayChar("#$#");
-    ArrayChar *current_value = new ArrayChar("");
+ public:
+  ListMap() {
+    ArrayChar* current_key = new ArrayChar("#$#");
+    ArrayChar* current_value = new ArrayChar("");
     head = new Node(current_key, current_value);
     tail = head;
     tail->prev = tail;
@@ -183,27 +183,35 @@ class ListMap {
     delete current_key;
     delete current_value;
   }
+  ~ListMap() {
+    Node* current_node = head;
+    while (current_node->next != nullptr) {
+      Node* next_node = current_node->next;
+      delete current_node;
+      current_node = next_node;
+    }
+    delete current_node;
+  }
 
   void Add(const ArrayChar* kKey, const ArrayChar* kValue) {
     Node* current_node = GetNode(kKey);
 
-    if (current_node != nullptr){
+    if (current_node != nullptr) {
       delete current_node->value;
       current_node->value = kValue->Copy();
-    } else{
-      Node *new_node = new Node(kKey, kValue);
+    } else {
+      Node* new_node = new Node(kKey, kValue);
       new_node->prev = tail;
       tail->next = new_node;
       tail = new_node;
     }
   }
 
-  ArrayChar* Get(const ArrayChar* kKey){
+  ArrayChar* Get(const ArrayChar* kKey) {
     Node* current_node = GetNode(kKey);
     if (current_node != nullptr) {
       return current_node->value->Copy();
-    }
-    else{
+    } else {
       return nullptr;
     }
   }
@@ -288,7 +296,8 @@ struct Parser {
     return {true, nullptr};
   }
 
-  static void CollectKeyFromFile(std::ifstream* file, ListMap* set_keys) {
+  static std::pair<bool, const char*> CollectKeyFromFile(std::ifstream* file,
+                                                         ListMap* set_keys) {
     size_t kSizeBuff = 1024;
     char buff[kSizeBuff];
     ArrayChar line(kSizeBuff);
@@ -322,8 +331,9 @@ struct Parser {
         delete line_trim;
         continue;
       } else if (line_trim->GetLength() < 3) {
-        std::cerr << "error \"key=value\" format\n";
-        exit(5);
+        // exit(5);
+        delete line_trim;
+        return {false, "error \"key=value\' format"};
       }
 
       uint32_t index_sign_equal = -1;
@@ -337,8 +347,9 @@ struct Parser {
 
       if (index_sign_equal <= 0 ||
           index_sign_equal + 1 == line_trim->GetLength()) {
-        std::cerr << "error \"key=value\" format\n";
-        exit(5);
+        // exit(5);
+        delete line_trim;
+        return {false, "error \"key=value\' format"};
       }
 
       ArrayChar key(index_sign_equal);
@@ -354,81 +365,28 @@ struct Parser {
         value.SetValue(index_value, line_trim->GetValue(index_line_trim));
       }
 
-      ArrayChar key_trim = key.Trim();
-      ArrayChar value_trim = value.Trim();
+      ArrayChar* key_trim = key.Trim();
+      ArrayChar* value_trim = value.Trim();
 
       // std::cout << "key: " << key_trim.ToChar() << std::endl;
       // std::cout << "value: " << value_trim.ToChar() << std::endl;
-      set_keys->Add(&key_trim, &value_trim);
+      set_keys->Add(key_trim, value_trim);
 
       for (uint32_t index = 0; index < kSizeBuff && buff[index] != '\0';
            index++) {
         line.SetValue(index, ' ');
       }
       delete line_trim;
+      delete key_trim;
+      delete value_trim;
     }
 
-    // final processing buffer
-    {
-      for (uint32_t index = 0; index < line.GetLength(); index++) {
-        line.SetValue(index, ' ');
-      }
-      for (uint32_t index = 0; index < kSizeBuff && index < file->gcount();
-           index++) {
-        line.SetValue(index, buff[index]);
-      }
-
-      ArrayChar* line_trim = line.Trim();
-      if (line_trim->GetLength() != 0) {
-        if ((line_trim->GetLength() > 0 && line_trim->GetValue(0) == '#') ||
-            (line_trim->GetLength() > 1 &&
-             line_trim->GetValue(0) == line_trim->GetValue(1) &&
-             line_trim->GetValue(1) == '/')) {
-          delete line_trim;
-          return;
-        } else if (line_trim->GetLength() < 3) {
-          std::cerr << "error \"key=value\" format\n";
-          exit(5);
-        }
-
-        uint32_t index_sign_equal = -1;
-
-        for (uint32_t index = 0; index < line_trim->GetLength(); index++) {
-          if (line_trim->GetValue(index) == '=') {
-            index_sign_equal = index;
-            break;
-          }
-        }
-
-        if (index_sign_equal <= 0 ||
-            index_sign_equal + 1 == line_trim->GetLength()) {
-          std::cerr << "error \"key=value\" format\n";
-          exit(5);
-        }
-
-        ArrayChar key(index_sign_equal);
-        ArrayChar value(line_trim->GetLength() - index_sign_equal - 1);
-
-        for (uint32_t index_value = 0; index_value < index_sign_equal;
-             index_value++) {
-          key.SetValue(index_value, line_trim->GetValue(index_value));
-        }
-        for (uint32_t index_line_trim = index_sign_equal + 1, index_value = 0;
-             index_line_trim < line_trim->GetLength();
-             index_line_trim++, index_value++) {
-          value.SetValue(index_value, line_trim->GetValue(index_line_trim));
-        }
-
-        set_keys->Add(&key, value.Copy());
-      }
-
-      delete line_trim;
-    }
+    return {true, nullptr};
   }
 
-  static void ReadAndReplaceKeysAndOutputFile(std::ifstream* file_template,
-                                              std::ofstream* file_output,
-                                              ListMap* set_keys) {
+  static std::pair<bool, const char*> ReadAndReplaceKeysAndOutputFile(
+      std::ifstream* file_template, std::ofstream* file_output,
+      ListMap* set_keys) {
     struct ReadMachin {
       ListMap* set_keys;
       ArrayChar* buff_for_key;
@@ -441,7 +399,8 @@ struct Parser {
       std::ofstream* file_output;
 
       ReadMachin(char start_separator_symbol, char finish_separator_symbol,
-                 size_t size_buff, ListMap* set_keys, std::ofstream* file_output) {
+                 size_t size_buff, ListMap* set_keys,
+                 std::ofstream* file_output) {
         this->size_buff = size_buff;
         buff_for_key = new ArrayChar(this->size_buff);
         mystate = State::text;
@@ -500,6 +459,7 @@ struct Parser {
             current_size_buff = 0;
             mystate = State::text;
             delete key_trim;
+            delete value;
             return true;
           } else {
             return false;
@@ -525,8 +485,8 @@ struct Parser {
         bool result = machine.add(buff[index]);
 
         if (!result) {
-          std::cerr << "data file has broblem with key\n";
-          exit(4);
+          // exit(4);
+          return {false, "data file has broblem with key"};
         }
       }
     }
@@ -535,10 +495,12 @@ struct Parser {
       bool result = machine.add(buff[index]);
 
       if (!result) {
-        std::cerr << "\ndata file has broblem with key\n";
-        exit(4);
+        // exit(4);
+        return {false, "data file has broblem with key"};
       }
     }
+
+    return {true, nullptr};
   }
 };
 
@@ -574,48 +536,101 @@ int main(int argc, char* argv[]) {
       Parser::GetCompileKey(argument_arr_size, argument_arr_str,
                             kCompilePattern[4], kCompilePattern[5]);
 
+  auto FreeAll = [&]() {
+    for (uint32_t index = 0; index < 6; index++) {
+      delete kCompilePattern[index];
+    }
+    delete[] kCompilePattern;
+
+    for (uint32_t index = 0; index < argument_arr_size; index++) {
+      if (argument_arr_str[index]) {
+        delete argument_arr_str[index];
+      }
+    }
+    delete[] argument_arr_str;
+
+    if (path_template) {
+      delete path_template;
+    }
+    if (path_data) {
+      delete path_data;
+    }
+    if (path_output) {
+      delete path_output;
+    }
+
+    if (file_template && file_template->is_open()) {
+      file_template->close();
+    }
+    if (file_data && file_data->is_open()) {
+      file_data->close();
+    }
+    if (file_output && file_output->is_open()) {
+      file_output->close();
+    }
+
+    if (file_template) {
+      delete file_template;
+    }
+    if (file_data) {
+      delete file_data;
+    }
+    if (file_output) {
+      delete file_output;
+    }
+  };
+
   std::pair<bool, const char*> correctly_path =
       Parser::CorrectlyParamKeys(path_template, path_data, path_output);
   if (!correctly_path.first) {
     std::cerr << "Parsing error: " << correctly_path.second << std::endl;
+    FreeAll();
     return 2;
   }
 
-  file_template = new std::ifstream(path_template->ToChar());
-  file_data = new std::ifstream(path_data->ToChar());
-  if (path_output) {
-    file_output = new std::ofstream(path_output->ToChar());
-  }
+  // open files
+  {
+    char* path_template_char = path_template->ToChar();
+    char* path_data_char = path_data->ToChar();
+    file_template = new std::ifstream(path_template_char);
+    file_data = new std::ifstream(path_data_char);
+    delete[] path_template_char;
+    delete[] path_data_char;
 
+    if (path_output) {
+      char* path_output_char = path_output->ToChar();
+      file_output = new std::ofstream(path_output_char);
+      delete[] path_output_char;
+    }
+  }
   std::pair<bool, const char*> correctly_file =
       Parser::CorrectlyFiles(file_template, file_data, file_output);
   if (!correctly_file.first) {
     std::cerr << "Open file error: " << correctly_file.second << std::endl;
+    FreeAll();
     return 3;
   }
 
   ListMap* set_keys = new ListMap();
 
-  Parser::CollectKeyFromFile(file_data, set_keys);
-  Parser::ReadAndReplaceKeysAndOutputFile(file_template, file_output, set_keys);
+  std::pair<bool, const char*> result_collect_key =
+      Parser::CollectKeyFromFile(file_data, set_keys);
+  if (!result_collect_key.first) {
+    std::cerr << result_collect_key.second << std::endl;
+    FreeAll();
+    delete set_keys;
+    return 5;
+  }
+  std::pair<bool, const char*> result_read_replace_output =
+      Parser::ReadAndReplaceKeysAndOutputFile(file_template, file_output,
+                                              set_keys);
+  if (!result_read_replace_output.first) {
+    std::cerr << result_read_replace_output.second << std::endl;
+    FreeAll();
+    delete set_keys;
+    return 4;
+  }
 
+  FreeAll();
   delete set_keys;
-
-  for (uint32_t index = 0; index < 6; index++) {
-    delete kCompilePattern[index];
-  }
-  delete[] kCompilePattern;
-
-  for (uint32_t index = 0; index < argument_arr_size; index++) {
-    if (argument_arr_str[index]) {
-      delete argument_arr_str[index];
-    }
-  }
-  delete[] argument_arr_str;
-
-  file_template->close();
-  file_data->close();
-  if (file_output) {
-    file_output->close();
-  }
 }
