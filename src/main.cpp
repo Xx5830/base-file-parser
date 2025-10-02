@@ -1,6 +1,7 @@
 #include <cstdint>
 #include <fstream>
 #include <iostream>
+#include <utility>
 
 void PrintChar(char symbol, std::ofstream* kFileOut) {
   if (kFileOut) {
@@ -12,7 +13,7 @@ void PrintChar(char symbol, std::ofstream* kFileOut) {
 
 class ArrayChar {
   char* str_;
-  size_t size_str_;
+  uint32_t size_str_;
 
  public:
   ArrayChar(const char* str) {
@@ -25,21 +26,21 @@ class ArrayChar {
     this->str_ = current->ToChar();
     delete current;
   }
-  ArrayChar(size_t size) {
+  ArrayChar(uint32_t size) {
     size_str_ = size;
     str_ = new char[size + 1];
     str_[size] = '\0';
   }
   ~ArrayChar() { delete[] str_; }
 
-  size_t GetLength() const { return size_str_; }
+  uint32_t GetLength() const { return size_str_; }
 
   char GetValue(uint32_t index) const { return str_[index]; }
 
   void SetValue(uint32_t index, char value) { str_[index] = value; }
 
   ArrayChar* Copy() const {
-    size_t size_str = GetLength();
+    uint32_t size_str = GetLength();
 
     ArrayChar* new_str = new ArrayChar(size_str);
     for (uint32_t index_str = 0; index_str < size_str; index_str++) {
@@ -97,8 +98,8 @@ class ArrayChar {
     return trim_str;
   }
 
-  static size_t GetLength(const char* kStr) {
-    size_t size_str = 0;
+  static uint32_t GetLength(const char* kStr) {
+    uint32_t size_str = 0;
     while (kStr[size_str] != '\0') {
       ++size_str;
     }
@@ -107,7 +108,7 @@ class ArrayChar {
   }
 
   static char* Copy(const char* str) {
-    size_t size_str = GetLength(str);
+    uint32_t size_str = GetLength(str);
 
     char* new_str = new char[size_str + 1];
     new_str[size_str] = '\0';
@@ -199,7 +200,7 @@ class ListMap {
 };
 
 struct Parser {
-  static ArrayChar* GetCompileKey(size_t count_arguments,
+  static ArrayChar* GetCompileKey(uint32_t count_arguments,
                                   ArrayChar** arguments_arr,
                                   const ArrayChar* kShortPattern,
                                   const ArrayChar* kLongPattern) {
@@ -216,7 +217,7 @@ struct Parser {
         break;
       } else if (current_str->HasPrefix(kLongPattern)) {
         if (!arguments_arr[index_argument]->Equal(kLongPattern)) {
-          size_t size_key = arguments_arr[index_argument]->GetLength() -
+          uint32_t size_key = arguments_arr[index_argument]->GetLength() -
                             kLongPattern->GetLength();
           result_key = new ArrayChar(size_key);
 
@@ -279,15 +280,15 @@ struct Parser {
 
   static std::pair<bool, const char*> CollectKeyFromFile(std::ifstream* file,
                                                          ListMap* set_keys) {
-    const size_t kSizeBuff = 1024;
-    char buff[kSizeBuff];
-    ArrayChar line(kSizeBuff);
+    const uint32_t size_buff = 1024;
+    char buff[size_buff];
+    ArrayChar line(size_buff);
     for (uint32_t index = 0; index < line.GetLength(); index++) {
       line.SetValue(index, ' ');
     }
 
-    while (file->getline(buff, kSizeBuff)) {
-      for (uint32_t index = 0; index < kSizeBuff && buff[index] != '\0';
+    while (file->getline(buff, size_buff)) {
+      for (uint32_t index = 0; index < size_buff && buff[index] != '\0';
            index++) {
         line.SetValue(index, buff[index]);
       }
@@ -298,14 +299,14 @@ struct Parser {
           (line_trim->GetLength() > 1 &&
            line_trim->GetValue(0) == line_trim->GetValue(1) &&
            line_trim->GetValue(1) == '/')) {
-        for (uint32_t index = 0; index < kSizeBuff && buff[index] != '\0';
+        for (uint32_t index = 0; index < size_buff && buff[index] != '\0';
              index++) {
           line.SetValue(index, ' ');
         }
         delete line_trim;
         continue;
       } else if (line_trim->GetLength() == 0) {
-        for (uint32_t index = 0; index < kSizeBuff && buff[index] != '\0';
+        for (uint32_t index = 0; index < size_buff && buff[index] != '\0';
              index++) {
           line.SetValue(index, ' ');
         }
@@ -353,7 +354,7 @@ struct Parser {
       // std::cout << "value: " << value_trim.ToChar() << std::endl;
       set_keys->Add(key_trim, value_trim);
 
-      for (uint32_t index = 0; index < kSizeBuff && buff[index] != '\0';
+      for (uint32_t index = 0; index < size_buff && buff[index] != '\0';
            index++) {
         line.SetValue(index, ' ');
       }
@@ -371,20 +372,20 @@ struct Parser {
     struct ReadMachin {
       ListMap* set_keys;
       ArrayChar* buff_for_key;
-      enum class State { text, startkey, key, finishkey };
+      enum class State { kText, kStartKey, kKey, kFinishKey };
       State mystate;
-      size_t size_buff;
-      size_t current_size_buff;
+      uint32_t size_buff;
+      uint32_t current_size_buff;
       char start_separator_symbol;
       char finish_separator_symbol;
       std::ofstream* file_output;
 
       ReadMachin(char start_separator_symbol, char finish_separator_symbol,
-                 size_t size_buff, ListMap* set_keys,
+                 uint32_t size_buff, ListMap* set_keys,
                  std::ofstream* file_output) {
         this->size_buff = size_buff;
         buff_for_key = new ArrayChar(this->size_buff);
-        mystate = State::text;
+        mystate = State::kText;
         this->start_separator_symbol = start_separator_symbol;
         this->finish_separator_symbol = finish_separator_symbol;
         current_size_buff = 0;
@@ -393,8 +394,8 @@ struct Parser {
       }
       ~ReadMachin() { delete buff_for_key; }
 
-      bool add(char symbol) {
-        if (mystate == State::key) {
+      bool Add(char symbol) {
+        if (mystate == State::kKey) {
           if ((symbol >= 'a' && symbol <= 'z') ||
               (symbol >= 'A' && symbol <= 'Z') ||
               (symbol >= '0' && symbol <= '9') || symbol == ' ' ||
@@ -403,22 +404,22 @@ struct Parser {
             buff_for_key->SetValue(++current_size_buff, '\0');
             return true;
           } else if (symbol == finish_separator_symbol) {
-            mystate = State::finishkey;
+            mystate = State::kFinishKey;
             return true;
           } else {
             return false;
           }
-        } else if (mystate == State::startkey) {
+        } else if (mystate == State::kStartKey) {
           if (symbol == start_separator_symbol) {
-            mystate = State::key;
+            mystate = State::kKey;
           } else {
             PrintChar(start_separator_symbol, file_output);
             PrintChar(symbol, file_output);
-            mystate = State::text;
+            mystate = State::kText;
           }
 
           return true;
-        } else if (mystate == State::finishkey) {
+        } else if (mystate == State::kFinishKey) {
           if (symbol == finish_separator_symbol) {
             ArrayChar key(current_size_buff);
             for (uint32_t index = 0; index < current_size_buff; index++) {
@@ -438,7 +439,7 @@ struct Parser {
             }
 
             current_size_buff = 0;
-            mystate = State::text;
+            mystate = State::kText;
             delete key_trim;
             delete value;
             return true;
@@ -447,7 +448,7 @@ struct Parser {
           }
         } else {
           if (symbol == start_separator_symbol) {
-            mystate = State::startkey;
+            mystate = State::kStartKey;
           } else {
             PrintChar(symbol, file_output);
           }
@@ -457,13 +458,13 @@ struct Parser {
       }
     };
 
-    const size_t kSizeBuff = 1024;
-    char buff[kSizeBuff];
-    ReadMachin machine('{', '}', kSizeBuff, set_keys, file_output);
+    const uint32_t size_buff = 1024;
+    char buff[size_buff];
+    ReadMachin machine('{', '}', size_buff, set_keys, file_output);
 
-    while (file_template->read(buff, kSizeBuff)) {
-      for (uint32_t index = 0; index < kSizeBuff; index++) {
-        bool result = machine.add(buff[index]);
+    while (file_template->read(buff, size_buff)) {
+      for (uint32_t index = 0; index < size_buff; index++) {
+        bool result = machine.Add(buff[index]);
 
         if (!result) {
           // exit(4);
@@ -473,7 +474,7 @@ struct Parser {
     }
 
     for (uint32_t index = 0; index < file_template->gcount(); index++) {
-      bool result = machine.add(buff[index]);
+      bool result = machine.Add(buff[index]);
 
       if (!result) {
         // exit(4);
@@ -486,15 +487,15 @@ struct Parser {
 };
 
 int main(int argc, char* argv[]) {
-  const ArrayChar** kCompilePattern = new const ArrayChar*[6];
-  kCompilePattern[0] = new ArrayChar("-t");
-  kCompilePattern[1] = new ArrayChar("--template=");
-  kCompilePattern[2] = new ArrayChar("-d");
-  kCompilePattern[3] = new ArrayChar("--data=");
-  kCompilePattern[4] = new ArrayChar("-o");
-  kCompilePattern[5] = new ArrayChar("--output=");
+  const ArrayChar** compile_pattern = new const ArrayChar*[6];
+  compile_pattern[0] = new ArrayChar("-t");
+  compile_pattern[1] = new ArrayChar("--template=");
+  compile_pattern[2] = new ArrayChar("-d");
+  compile_pattern[3] = new ArrayChar("--data=");
+  compile_pattern[4] = new ArrayChar("-o");
+  compile_pattern[5] = new ArrayChar("--output=");
 
-  size_t argument_arr_size = argc;
+  uint32_t argument_arr_size = argc;
   ArrayChar** argument_arr_str = new ArrayChar*[argc];
 
   for (uint32_t index = 0; index < argument_arr_size; index++) {
@@ -507,21 +508,21 @@ int main(int argc, char* argv[]) {
 
   ArrayChar* path_template =
       Parser::GetCompileKey(argument_arr_size, argument_arr_str,
-                            kCompilePattern[0], kCompilePattern[1]);
+                            compile_pattern[0], compile_pattern[1]);
 
   ArrayChar* path_data =
       Parser::GetCompileKey(argument_arr_size, argument_arr_str,
-                            kCompilePattern[2], kCompilePattern[3]);
+                            compile_pattern[2], compile_pattern[3]);
 
   ArrayChar* path_output =
       Parser::GetCompileKey(argument_arr_size, argument_arr_str,
-                            kCompilePattern[4], kCompilePattern[5]);
+                            compile_pattern[4], compile_pattern[5]);
 
   auto FreeAll = [&]() {
     for (uint32_t index = 0; index < 6; index++) {
-      delete kCompilePattern[index];
+      delete compile_pattern[index];
     }
-    delete[] kCompilePattern;
+    delete[] compile_pattern;
 
     for (uint32_t index = 0; index < argument_arr_size; index++) {
       if (argument_arr_str[index]) {
